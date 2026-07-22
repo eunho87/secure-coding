@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}채팅 — MyMarket{% endblock %}
+{% block content %}
+<h2>1:1 채팅</h2>
+<div class="panel">
+  <ul class="plain">
+    {% for partner in partners %}
+      <li>
+        <a href="{{ url_for('private_chat', username=partner.username) }}">
+          <span class="avatar">{{ partner.username[0]|upper }}</span>
+          <strong>{{ partner.username }}</strong>
+        </a>
+      </li>
+    {% else %}
+      <li class="muted">진행 중인 채팅이 없습니다. 상품 페이지나 사용자 프로필에서 채팅을 시작해보세요.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

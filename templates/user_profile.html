@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}사용자 프로필{% endblock %}
+{% block content %}
+<h2>{{ profile_user.username }}님의 프로필
+  {% if profile_user.is_dormant %}<span class="badge blocked">휴면</span>{% endif %}
+  {% if profile_user.is_admin %}<span class="badge admin">관리자</span>{% endif %}
+</h2>
+<p>
+  {% if rating %}
+    <span class="stars">★ {{ rating }}</span> <span class="muted">(거래 후기 {{ rating_count }}개)</span>
+  {% else %}
+    <span class="muted">아직 거래 후기가 없습니다.</span>
+  {% endif %}
+</p>
+<p style="white-space: pre-line">{{ profile_user.bio or '소개글이 없습니다.' }}</p>
+
+{% if current_user and profile_user.id != current_user.id %}
+  <p>
+    <a href="{{ url_for('private_chat', username=profile_user.username) }}">1:1 채팅하기</a>
+    | <a href="{{ url_for('report', type='user', target=profile_user.username) }}">신고하기</a>
+  </p>
+{% endif %}
+
+<h3>판매 상품</h3>
+{% include "_product_grid.html" %}
+
+{% if reviews %}
+  <h3>받은 거래 후기</h3>
+  <ul>
+    {% for r in reviews %}
+      <li>
+        <span class="stars">★ {{ r.rating }}</span>
+        {{ r.comment or '(코멘트 없음)' }}
+        <span class="muted">— {{ r.reviewer }}, {{ r.created_at }} (UTC)</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

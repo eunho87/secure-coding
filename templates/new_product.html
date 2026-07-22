@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}판매하기{% endblock %}
+{% block content %}
+<h2>상품 등록</h2>
+<form method="post" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  상품명 (100자 이내): <input type="text" name="title" maxlength="100" required>
+  <div class="filter-row">
+    <select name="category" required>
+      <option value="">카테고리 선택</option>
+      {% for c in CATEGORIES %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+    </select>
+    <select name="condition" required>
+      <option value="">상품 상태 선택</option>
+      {% for c in CONDITIONS %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+    </select>
+  </div>
+  설명 (2000자 이내):
+  <textarea name="description" rows="5" maxlength="2000" required></textarea>
+  가격 (원): <input type="number" name="price" min="1" max="100000000" required>
+  상품 사진 (최대 5장, png/jpg/gif/webp): <input type="file" name="images" accept="image/*" multiple>
+  <button type="submit">등록하기</button>
+</form>
+{% endblock %}

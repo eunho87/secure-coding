@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}MyMarket — 믿을 수 있는 중고거래{% endblock %}
+{% block content %}
+<div class="hero">
+  <h1>우리 동네 중고거래,<br><span class="accent">안전하게</span> 시작하세요</h1>
+  <p>에스크로 안전결제와 거래 후기로 믿을 수 있는 중고거래 플랫폼</p>
+  <div class="hero-actions">
+    <a class="primary" href="{{ url_for('register') }}">지금 시작하기</a>
+    <a class="outline" href="{{ url_for('dashboard') }}">상품 구경하기</a>
+  </div>
+  <div class="hero-features">
+    <div class="feat">🔒 에스크로 안전거래</div>
+    <div class="feat">💬 실시간 채팅</div>
+    <div class="feat">⭐ 거래 후기 · 평점</div>
+    <div class="feat">🛡️ 2단계 인증</div>
+  </div>
+</div>
+{% endblock %}

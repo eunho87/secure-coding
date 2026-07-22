@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{{ other.username }}님과의 채팅 — MyMarket{% endblock %}
+{% block content %}
+<div class="section-head">
+  <h3><span class="avatar">{{ other.username[0]|upper }}</span> {{ other.username }}님과의 채팅</h3>
+  <a href="{{ url_for('user_profile', username=other.username) }}" class="muted">프로필 보기</a>
+</div>
+<div class="chat-box">
+  <ul id="private_messages">
+    {% for m in chat_history %}
+      <li class="msg {{ 'mine' if m.username == current_user.username }}">
+        <span class="who">{{ m.username }}</span>
+        <span class="bubble">{{ m.content }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+  <div class="chat-input-row">
+    <input id="chat_input" type="text" maxlength="500" placeholder="메시지를 입력하세요">
+    <button id="send_btn" type="button">전송</button>
+  </div>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+  var socket = io();
+  var messages = document.getElementById('private_messages');
+  var otherName = {{ other.username|tojson }};
+  var myName = {{ current_user.username|tojson }};
+
+  function appendMessage(username, message, isSystem) {
+    var item = document.createElement('li');
+    item.className = 'msg' + (username === myName ? ' mine' : '') + (isSystem ? ' system' : '');
+    var who = document.createElement('span');
+    who.className = 'who';
+    who.textContent = username;
+    var bubble = document.createElement('span');
+    bubble.className = 'bubble';
+    bubble.textContent = message;
+    item.appendChild(who);
+    item.appendChild(bubble);
+    messages.appendChild(item);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  socket.on('connect', function() {
+    socket.emit('join_private', { 'username': otherName });
+  });
+  socket.on('private_message', function(data) {
+    appendMessage(data.username, data.message, false);
+  });
+  socket.on('error_message', function(data) {
+    appendMessage('시스템', data.error, true);
+  });
+
+  function sendMessage() {
+    var input = document.getElementById('chat_input');
+    var message = input.value.trim();
+    if (message && message.length <= 500) {
+      socket.emit('send_private', { 'username': otherName, 'message': message });
+      input.value = '';
+    }
+  }
+  document.getElementById('send_btn').addEventListener('click', sendMessage);
+  document.getElementById('chat_input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') sendMessage();
+  });
+  messages.scrollTop = messages.scrollHeight;
+</script>
+{% endblock %}

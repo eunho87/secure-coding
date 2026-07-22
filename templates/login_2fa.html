@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}2단계 인증{% endblock %}
+{% block content %}
+<h2>2단계 인증</h2>
+<p class="muted">인증 앱에 표시된 6자리 코드를 입력하세요.</p>
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  인증 코드: <input type="text" name="code" maxlength="6" pattern="\d{6}" autofocus required>
+  <button type="submit">확인</button>
+</form>
+{% endblock %}

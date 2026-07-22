@@ -1,0 +1,8 @@
+*.db
+*.pptx
+__pycache__
+instance/
+app.log
+static/uploads/
+.venv/
+server.log

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}회원가입 — MyMarket{% endblock %}
+{% block content %}
+<div class="auth-card">
+  <h2>회원가입</h2>
+  <p class="sub">1분이면 충분해요</p>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>사용자명 <span class="muted">(영문/숫자/밑줄 4~20자)</span></label>
+    <input type="text" name="username" maxlength="20" pattern="[A-Za-z0-9_]{4,20}" required>
+    <label>비밀번호 <span class="muted">(8자 이상, 영문+숫자 포함)</span></label>
+    <input type="password" name="password" maxlength="72" required>
+    <label>비밀번호 확인</label>
+    <input type="password" name="password2" maxlength="72" required>
+    <button type="submit">가입하기</button>
+  </form>
+  <p class="auth-switch">이미 계정이 있나요? <a href="{{ url_for('login') }}">로그인</a></p>
+</div>
+{% endblock %}

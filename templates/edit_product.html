@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}상품 수정{% endblock %}
+{% block content %}
+<h2>상품 수정</h2>
+<form method="post" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  상품명: <input type="text" name="title" maxlength="100" value="{{ product.title }}" required>
+  <div class="filter-row">
+    <select name="category" required>
+      {% for c in CATEGORIES %}
+        <option value="{{ c }}" {% if product.category == c %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+    <select name="condition" required>
+      {% for c in CONDITIONS %}
+        <option value="{{ c }}" {% if product.condition == c %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  설명:
+  <textarea name="description" rows="5" maxlength="2000" required>{{ product.description }}</textarea>
+  가격 (원): <input type="number" name="price" min="1" max="100000000" value="{{ product.price }}" required>
+
+  {% if images %}
+    <p class="muted">등록된 사진 ({{ images|length }}/5)</p>
+    <div class="gallery">
+      {% for img in images %}
+        <img src="{{ url_for('uploaded_file', filename=img) }}" alt="상품 사진">
+      {% endfor %}
+    </div>
+  {% endif %}
+  사진 추가 (총 5장까지): <input type="file" name="images" accept="image/*" multiple>
+  <button type="submit">수정하기</button>
+</form>
+{% endblock %}

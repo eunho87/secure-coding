@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}{{ product.title }} — MyMarket{% endblock %}
+{% block content %}
+<div class="product-layout">
+  <div class="gallery">
+    {% if images %}
+      <img class="main" src="{{ url_for('uploaded_file', filename=images[0]) }}" alt="상품 사진">
+      {% if images|length > 1 %}
+        <div class="thumbs">
+          {% for img in images[1:] %}
+            <img src="{{ url_for('uploaded_file', filename=img) }}" alt="상품 사진">
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="no-image">등록된 사진이 없습니다</div>
+    {% endif %}
+  </div>
+
+  <div class="product-info">
+    <p style="margin:0">
+      <span class="badge cat">{{ product.category }}</span>
+      <span class="badge cond">{{ product.condition }}</span>
+      {% if product.status == 'sold' %}<span class="badge sold">판매완료</span>
+      {% elif product.status == 'reserved' %}<span class="badge reserved">예약중 · 거래 진행</span>{% endif %}
+      {% if product.is_blocked %}<span class="badge blocked">차단됨</span>{% endif %}
+    </p>
+    <h2>{{ product.title }}</h2>
+    <div class="big-price">{{ '{:,}'.format(product.price) }}원</div>
+    <p class="muted">조회 {{ product.view_count }} · 찜 {{ fav_count }} · 등록 {{ product.created_at }} (UTC)</p>
+
+    {% if seller %}
+      <div class="seller-box">
+        <span class="avatar">{{ seller.username[0]|upper }}</span>
+        <div>
+          <a href="{{ url_for('user_profile', username=seller.username) }}"><strong>{{ seller.username }}</strong></a>
+          {% if rating %}<span class="stars">★ {{ rating }}</span> <span class="muted">(후기 {{ rating_count }})</span>
+          {% else %}<span class="muted">아직 후기 없음</span>{% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+    <p class="desc">{{ product.description }}</p>
+
+    {% if is_owner %}
+      {% if product.status != 'reserved' %}
+        <a href="{{ url_for('edit_product', product_id=product.id) }}"><button type="button" class="ghost">상품 수정</button></a>
+        <form method="post" action="{{ url_for('delete_product', product_id=product.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="danger">삭제</button>
+        </form>
+      {% else %}
+        <p class="muted">거래 진행 중에는 수정/삭제할 수 없습니다.</p>
+      {% endif %}
+    {% elif not current_user %}
+      <div class="card" style="text-align:center;margin-top:16px">
+        <p>로그인하면 판매자와 채팅하고 안전거래로 구매할 수 있어요.</p>
+        <a href="{{ url_for('login') }}"><button type="button" style="width:auto;padding:10px 24px">로그인 / 회원가입</button></a>
+      </div>
+    {% else %}
+      {% if seller %}
+        <a href="{{ url_for('private_chat', username=seller.username) }}"><button type="button" class="secondary">💬 판매자와 채팅</button></a>
+      {% endif %}
+      <form class="inline-form" method="post" action="{{ url_for('toggle_favorite', product_id=product.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="ghost" style="width:100%">{{ '♥ 찜 해제' if is_faved else '♡ 찜하기' }}</button>
+      </form>
+      <p class="muted" style="margin-top:10px">
+        <a href="{{ url_for('report', type='product', target=product.id) }}">상품 신고</a>
+        {% if seller %} · <a href="{{ url_for('report', type='user', target=seller.username) }}">판매자 신고</a>{% endif %}
+      </p>
+    {% endif %}
+  </div>
+</div>
+
+{% if is_owner and offers %}
+  <div class="card">
+    <h3>받은 가격 제안</h3>
+    <table>
+      <tr><th>제안자</th><th>금액</th><th>상태</th><th>처리</th></tr>
+      {% for o in offers %}
+        <tr>
+          <td>{{ o.buyer_name }}</td>
+          <td><strong>{{ '{:,}'.format(o.amount) }}원</strong></td>
+          <td>{{ {'pending':'대기','accepted':'수락됨','rejected':'거절됨'}[o.status] }}</td>
+          <td>
+            {% if o.status == 'pending' %}
+              <form class="inline-form" method="post" action="{{ url_for('respond_offer', offer_id=o.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" name="action" value="accept">수락</button>
+                <button type="submit" name="action" value="reject" class="danger">거절</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+{% endif %}
+
+{% if current_user and not is_owner %}
+  {% if active_escrow %}
+    <div class="card">
+      <h3>🔒 진행 중인 안전거래</h3>
+      <p>{{ ESCROW_STATUS_LABEL[active_escrow.status] }} — <strong>{{ '{:,}'.format(active_escrow.amount) }}원</strong></p>
+      <p class="muted">지갑 페이지에서 구매 확정/취소/분쟁 처리를 할 수 있습니다.
+        <a href="{{ url_for('wallet') }}">지갑으로 이동 →</a></p>
+    </div>
+  {% elif product.status == 'selling' and not product.is_blocked %}
+    <div class="product-layout">
+      <div class="card" style="margin:0">
+        <h3>🔒 안전거래로 구매하기</h3>
+        <p class="muted">결제 금액은 플랫폼(에스크로)이 보관하며, 상품 수령 후 구매 확정 시 판매자에게 지급됩니다.
+          {% if my_offer and my_offer.status == 'accepted' %}
+            <br><strong>수락된 가격 제안({{ '{:,}'.format(my_offer.amount) }}원)으로 결제됩니다.</strong>
+          {% endif %}
+        </p>
+        <form method="post" action="{{ url_for('buy_product', product_id=product.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="form_token" value="{{ form_token() }}">
+          <label>본인 확인 비밀번호</label>
+          <input type="password" name="password" required>
+          {% if current_user.totp_secret %}
+            <label>2단계 인증 코드 (6자리)</label>
+            <input type="text" name="totp_code" maxlength="6" pattern="\d{6}" required>
+          {% endif %}
+          <button type="submit">안전거래 결제</button>
+        </form>
+      </div>
+      <div class="card" style="margin:0">
+        <h3>💰 가격 제안하기</h3>
+        {% if my_offer %}
+          <p class="muted">내 제안: <strong>{{ '{:,}'.format(my_offer.amount) }}원</strong> —
+            {{ {'pending':'판매자 응답 대기 중','accepted':'수락됨! 왼쪽에서 구매를 진행하세요.','rejected':'거절됨 (다시 제안 가능)'}[my_offer.status] }}</p>
+        {% endif %}
+        {% if not my_offer or my_offer.status == 'rejected' %}
+          <form method="post" action="{{ url_for('make_offer', product_id=product.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>제안 금액 (판매가 미만)</label>
+            <input type="number" name="amount" min="1" max="{{ product.price - 1 }}" required>
+            <button type="submit" class="secondary">제안 보내기</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+{% endif %}
+{% endblock %}

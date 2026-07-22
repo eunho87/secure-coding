@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}사용자 관리{% endblock %}
+{% block content %}
+<h2>사용자 관리</h2>
+<table>
+  <tr><th>사용자명</th><th>가입일(UTC)</th><th>잔액</th><th>신고 수</th><th>상태</th><th>처리</th></tr>
+  {% for u in users %}
+    <tr>
+      <td><a href="{{ url_for('user_profile', username=u.username) }}">{{ u.username }}</a>
+        {% if u.is_admin %}<span class="badge admin">관리자</span>{% endif %}</td>
+      <td>{{ u.created_at }}</td>
+      <td>{{ '{:,}'.format(u.balance) }}원</td>
+      <td>{{ u.report_count }}</td>
+      <td>{% if u.is_dormant %}<span class="badge blocked">휴면</span>{% else %}정상{% endif %}</td>
+      <td>
+        {% if not u.is_admin %}
+          <form class="inline-form" method="post" action="{{ url_for('admin_toggle_dormant', user_id=u.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" {% if not u.is_dormant %}class="danger"{% endif %}>
+              {{ '휴면 해제' if u.is_dormant else '휴면 전환' }}
+            </button>
+          </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+</table>
+<p><a href="{{ url_for('admin_dashboard') }}">← 관리자 대시보드</a></p>
+{% endblock %}

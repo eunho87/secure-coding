@@ -1,0 +1,28 @@
+<div class="product-grid">
+  {% for product in products %}
+    <div class="product-card">
+      <a href="{{ url_for('view_product', product_id=product.id) }}">
+        {% if product.thumb %}
+          <img class="thumb" src="{{ url_for('uploaded_file', filename=product.thumb) }}" alt="{{ product.title }}">
+        {% else %}
+          <div class="no-thumb">사진 없음</div>
+        {% endif %}
+        <div class="info">
+          <div class="title">{{ product.title }}</div>
+          <div class="price">{{ '{:,}'.format(product.price) }}원</div>
+          <div class="meta">
+            <span class="badge cat">{{ product.category }}</span>
+            {% if product.status == 'sold' %}<span class="badge sold">판매완료</span>
+            {% elif product.status == 'reserved' %}<span class="badge reserved">예약중</span>{% endif %}
+          </div>
+          <div class="meta">
+            조회 {{ product.view_count }}{% if product.fav_count is defined %} · 찜 {{ product.fav_count }}{% endif %}
+            {% if product.seller_name is defined %} · {{ product.seller_name }}{% endif %}
+          </div>
+        </div>
+      </a>
+    </div>
+  {% else %}
+    <p class="muted">상품이 없습니다.</p>
+  {% endfor %}
+</div>

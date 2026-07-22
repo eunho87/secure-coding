@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}결제 — MyMarket{% endblock %}
+{% block content %}
+<div class="auth-card">
+  <h2>충전 결제</h2>
+  <p class="sub">주문번호 <span class="muted">{{ pay.id[:8] }}</span></p>
+  <p class="big-price" style="text-align:center">{{ '{:,}'.format(pay.amount) }}원</p>
+
+  {% if provider == 'toss' %}
+    {# 토스페이먼츠 결제위젯 — 성공 시 서버가 금액을 재검증하고 승인 #}
+    <div id="payment-method"></div>
+    <div id="agreement"></div>
+    <button id="pay-button" type="button">결제하기</button>
+    <p class="muted" style="text-align:center; margin-top:10px">
+      테스트 모드에서는 실제 결제가 발생하지 않습니다.
+    </p>
+    <script src="https://js.tosspayments.com/v1/payment-widget" nonce="{{ csp_nonce }}"></script>
+    <script nonce="{{ csp_nonce }}">
+      var widget = PaymentWidget({{ toss_client_key|tojson }}, PaymentWidget.ANONYMOUS);
+      widget.renderPaymentMethods('#payment-method', {{ pay.amount|tojson }});
+      widget.renderAgreement('#agreement');
+      document.getElementById('pay-button').addEventListener('click', function () {
+        widget.requestPayment({
+          orderId: {{ pay.id|tojson }},
+          orderName: 'MyMarket 충전 {{ pay.amount }}원',
+          successUrl: window.location.origin + '/payment/toss/success',
+          failUrl: window.location.origin + '/payment/toss/fail'
+        });
+      });
+    </script>
+  {% else %}
+    {# 가상 PG — 실제 PG의 승인/취소 리다이렉트 흐름을 동일하게 시뮬레이션 #}
+    <p class="muted" style="text-align:center">
+      가상 결제 게이트웨이입니다. 실제 PG처럼 승인/취소를 선택하세요.
+    </p>
+    <form method="post" action="{{ url_for('payment_mock_confirm') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="form_token" value="{{ form_token() }}">
+      <input type="hidden" name="order_id" value="{{ pay.id }}">
+      <button type="submit" name="action" value="approve">결제 승인</button>
+      <button type="submit" name="action" value="cancel" class="ghost">결제 취소</button>
+    </form>
+  {% endif %}
+
+  <p class="auth-switch"><a href="{{ url_for('wallet') }}">← 지갑으로 돌아가기</a></p>
+</div>
+{% endblock %}

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}My Market{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='vendor/socket.io.min.js') }}" nonce="{{ csp_nonce }}"></script>
+</head>
+<body>
+  <header class="site">
+    <div class="header-inner">
+      <a class="logo" href="{{ url_for('index') }}">My<span class="dot">Market</span></a>
+      {% if current_user %}
+        <nav class="main-nav">
+          <a href="{{ url_for('dashboard') }}">홈</a>
+          <a href="{{ url_for('search') }}">검색</a>
+          <a href="{{ url_for('chat_list') }}">채팅</a>
+          <a href="{{ url_for('wallet') }}">지갑</a>
+        </nav>
+        <div class="header-right">
+          <a class="icon-link" href="{{ url_for('notifications') }}">알림{% if unread_notifications %}<span class="noti-dot">{{ unread_notifications }}</span>{% endif %}</a>
+          <a class="sell-btn" href="{{ url_for('new_product') }}">+ 판매하기</a>
+          <details class="user-menu">
+            <summary>
+              <span class="avatar">{{ current_user.username[0]|upper }}</span>
+              {{ current_user.username }}
+            </summary>
+            <div class="menu-panel">
+              <div class="menu-balance">보유 잔액
+                <strong>{{ '{:,}'.format(current_user.balance) }}원</strong>
+              </div>
+              <a href="{{ url_for('profile') }}">마이페이지</a>
+              <a href="{{ url_for('my_products') }}">내 상품 관리</a>
+              <a href="{{ url_for('my_favorites') }}">찜 목록</a>
+              <a href="{{ url_for('wallet') }}">지갑 · 거래내역</a>
+              <a href="{{ url_for('report') }}">신고하기</a>
+              {% if current_user.is_admin %}<a href="{{ url_for('admin_dashboard') }}">관리자 콘솔</a>{% endif %}
+              <form method="post" action="{{ url_for('logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit">로그아웃</button>
+              </form>
+            </div>
+          </details>
+        </div>
+      {% else %}
+        <nav class="main-nav">
+          <a href="{{ url_for('dashboard') }}">상품</a>
+          <a href="{{ url_for('search') }}">검색</a>
+        </nav>
+        <div class="header-right">
+          <a class="icon-link" href="{{ url_for('login') }}">로그인</a>
+          <a class="sell-btn" href="{{ url_for('register') }}">시작하기</a>
+        </div>
+      {% endif %}
+    </div>
+  </header>
+
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul class="flash-list">
+          {% for message in messages %}
+            <li class="flash">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </div>
+
+  <footer class="site">
+    <div class="footer-inner">
+      MyMarket — Tiny Second-hand Shopping Platform · Secure Coding 실습 프로젝트<br>
+      에스크로 안전거래 · 2단계 인증 · 모든 결제는 모의 재화로 처리됩니다.
+    </div>
+  </footer>
+</body>
+</html>

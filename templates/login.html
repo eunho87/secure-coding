@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}로그인 — MyMarket{% endblock %}
+{% block content %}
+<div class="auth-card">
+  <h2>로그인</h2>
+  <p class="sub">MyMarket에 다시 오신 것을 환영해요</p>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>사용자명</label>
+    <input type="text" name="username" maxlength="20" required>
+    <label>비밀번호</label>
+    <input type="password" name="password" maxlength="72" required>
+    <button type="submit">로그인</button>
+  </form>
+  <p class="auth-switch">아직 계정이 없나요? <a href="{{ url_for('register') }}">회원가입</a></p>
+</div>
+{% endblock %}

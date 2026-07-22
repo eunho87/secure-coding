@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}알림 — MyMarket{% endblock %}
+{% block content %}
+<h2>알림</h2>
+<div class="panel">
+  <ul class="plain">
+    {% for n in notifications %}
+      <li>
+        {% if n.link %}<a href="{{ n.link }}">{{ n.content }}</a>{% else %}{{ n.content }}{% endif %}
+        {% if not n.is_read %}<span class="badge noti">N</span>{% endif %}
+        <div class="muted">{{ n.created_at }} (UTC)</div>
+      </li>
+    {% else %}
+      <li class="muted">알림이 없습니다.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}
