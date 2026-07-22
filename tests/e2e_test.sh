@@ -305,6 +305,62 @@ T=$(csrf $B /report)
 curl -s -o $TMP/rp3 -b $B -c $B --data-urlencode "csrf_token=$T" --data-urlencode "target_type=user" --data-urlencode "target=$BOB" --data-urlencode "reason=self" $BASE/report -L
 contains "자기 자신 신고 거부" $TMP/rp3 "자기 자신은 신고할 수 없습니다"
 
+# --- 중복 가입 / 소개글 수정 ---
+T=$(csrf $A /register)
+curl -s -o $TMP/dup -b $A -c $A -d "csrf_token=$T&username=$ALICE&password=Passw0rd1&password2=Passw0rd1" $BASE/register -L
+contains "중복 사용자명 가입 거부" $TMP/dup "이미 존재하는 사용자명"
+
+T=$(csrf $A /profile)
+curl -s -o /dev/null -b $A -c $A --data-urlencode "csrf_token=$T" --data-urlencode "bio=중고거래 자주 합니다 $RUN" $BASE/profile -L
+curl -s -o $TMP/bio -b $A $BASE/profile
+contains "소개글 수정 반영" $TMP/bio "중고거래 자주 합니다 $RUN"
+
+# --- 신고 누적 → 상품 자동 차단 (서로 다른 3명) ---
+T=$(csrf $A /product/new)
+curl -s -o $TMP/bp -b $A -c $A --data-urlencode "csrf_token=$T" --data-urlencode "title=신고차단 테스트 $RUN" --data-urlencode "description=신고 누적 확인용" --data-urlencode "price=10000" --data-urlencode "category=기타" --data-urlencode "condition=새상품" $BASE/product/new -L
+BPID=$(uuid_from $TMP/bp "/product/")
+for i in 1 2 3; do
+  RC=$TMP/rep$i.cookie
+  T=$(csrf $RC /register)
+  curl -s -o /dev/null -b $RC -c $RC -d "csrf_token=$T&username=rep${i}_$RUN&password=Passw0rd1&password2=Passw0rd1" $BASE/register
+  T=$(csrf $RC /login)
+  curl -s -o /dev/null -b $RC -c $RC -d "csrf_token=$T&username=rep${i}_$RUN&password=Passw0rd1" $BASE/login -L
+  T=$(csrf $RC /report)
+  curl -s -o /dev/null -b $RC -c $RC --data-urlencode "csrf_token=$T" --data-urlencode "target_type=product" --data-urlencode "target=$BPID" --data-urlencode "reason=신고 누적 테스트" $BASE/report -L
+done
+curl -s -o $TMP/blk -b $TMP/rep1.cookie $BASE/product/$BPID -L
+contains "신고 3회 누적 시 상품 자동 차단" $TMP/blk "차단된 상품입니다"
+
+# --- 신고 누적 → 유저 자동 휴면 (서로 다른 5명) ---
+VIC=victim_$RUN
+VC=$TMP/vic.cookie
+T=$(csrf $VC /register)
+curl -s -o /dev/null -b $VC -c $VC -d "csrf_token=$T&username=$VIC&password=Passw0rd1&password2=Passw0rd1" $BASE/register
+for i in 1 2 3 4 5; do
+  RC=$TMP/vrep$i.cookie
+  T=$(csrf $RC /register)
+  curl -s -o /dev/null -b $RC -c $RC -d "csrf_token=$T&username=vrep${i}_$RUN&password=Passw0rd1&password2=Passw0rd1" $BASE/register
+  T=$(csrf $RC /login)
+  curl -s -o /dev/null -b $RC -c $RC -d "csrf_token=$T&username=vrep${i}_$RUN&password=Passw0rd1" $BASE/login -L
+  T=$(csrf $RC /report)
+  curl -s -o /dev/null -b $RC -c $RC --data-urlencode "csrf_token=$T" --data-urlencode "target_type=user" --data-urlencode "target=$VIC" --data-urlencode "reason=신고 누적 테스트" $BASE/report -L
+done
+T=$(csrf $VC /login)
+curl -s -o $TMP/dorm -b $VC -c $VC -d "csrf_token=$T&username=$VIC&password=Passw0rd1" $BASE/login -L
+contains "신고 5회 누적 시 유저 자동 휴면" $TMP/dorm "휴면 계정"
+
+# --- 분쟁 중재용 거래 준비 (구매 → 분쟁 신청) ---
+T=$(csrf $A /product/new)
+curl -s -o $TMP/dp -b $A -c $A --data-urlencode "csrf_token=$T" --data-urlencode "title=분쟁 테스트 상품 $RUN" --data-urlencode "description=분쟁 중재 확인용" --data-urlencode "price=20000" --data-urlencode "category=기타" --data-urlencode "condition=새상품" $BASE/product/new -L
+PID3=$(uuid_from $TMP/dp "/product/")
+T=$(csrf $B /product/$PID3); F=$(ftoken $B /product/$PID3)
+curl -s -o /dev/null -b $B -c $B -d "csrf_token=$T&form_token=$F&password=Passw0rd1" $BASE/product/$PID3/buy -L
+curl -s -o $TMP/dw -b $B $BASE/wallet
+EID3=$(grep -oE "/escrow/[0-9a-f-]{36}/dispute" $TMP/dw | head -1 | sed 's#/escrow/##;s#/dispute##')
+T=$(csrf $B /wallet)
+curl -s -o $TMP/dsp -b $B -c $B -d "csrf_token=$T" $BASE/escrow/$EID3/dispute -L
+contains "분쟁 신청" $TMP/dsp "분쟁이 접수되었습니다"
+
 # --- 관리자 ---
 # 세 가지 상태를 모두 지원:
 #  (a) fresh DB + 기본 비밀번호  → 변경 강제 흐름 검증 후 NewAdmin1로 변경
@@ -336,6 +392,34 @@ curl -s -o $TMP/adf -b $ADM $BASE/admin/finance
 contains "관리자 재무 감사 페이지" $TMP/adf "재무 무결성 감사"
 contains "원장-잔액 무결성 일치" $TMP/adf "원장 합계와 잔액이 일치"
 
+# 관리자 상품 차단 토글 (자동 차단된 상품을 해제)
+T=$(csrf $ADM /admin/products)
+curl -s -o $TMP/adb -b $ADM -c $ADM -d "csrf_token=$T" $BASE/admin/product/$BPID/block -L
+contains "관리자 상품 차단 해제" $TMP/adb "처리되었습니다"
+curl -s -o $TMP/adb2 -b $TMP/rep1.cookie $BASE/product/$BPID -L
+if grep -q "차단된 상품입니다" $TMP/adb2; then
+  FAIL=$((FAIL+1)); echo "FAIL: 차단 해제 후 상품 열람"
+else
+  PASS=$((PASS+1)); echo "PASS: 차단 해제 후 상품 열람 가능"
+fi
+
+# 관리자 유저 휴면 해제 → 다시 로그인 가능
+curl -s -o $TMP/adu -b $ADM $BASE/admin/users
+VUID=$(grep -A12 ">$VIC<" $TMP/adu | grep -oE '/admin/user/[0-9a-f-]{36}/dormant' | head -1 | sed 's#/admin/user/##;s#/dormant##')
+T=$(csrf $ADM /admin/users)
+curl -s -o $TMP/add -b $ADM -c $ADM -d "csrf_token=$T" $BASE/admin/user/$VUID/dormant -L
+contains "관리자 유저 휴면 해제" $TMP/add "처리되었습니다"
+rm -f $VC
+T=$(csrf $VC /login)
+curl -s -o $TMP/vlog -b $VC -c $VC -d "csrf_token=$T&username=$VIC&password=Passw0rd1" $BASE/login -L
+contains "휴면 해제 후 로그인 가능" $TMP/vlog "로그인 성공"
+
+# 관리자 분쟁 중재 (구매자 환불로 처리)
+T=$(csrf $ADM /admin/escrows)
+curl -s -o $TMP/adr -b $ADM -c $ADM -d "csrf_token=$T&outcome=refund" $BASE/admin/escrow/$EID3/resolve -L
+contains "관리자 분쟁 중재(환불)" $TMP/adr "중재가 완료되었습니다"
+contains "중재 후 거래 상태 반영" $TMP/adr "취소됨 (구매자 환불)"
+
 # --- 금융: 원장(ledger) 기록 확인 ---
 curl -s -o $TMP/led -b $B $BASE/wallet
 contains "지갑 원장 표시" $TMP/led "잔액 변동 내역"
@@ -343,6 +427,18 @@ contains "지갑 원장 표시" $TMP/led "잔액 변동 내역"
 # 일반 유저의 관리자 접근 → 403
 CODE=$(curl -s -o /dev/null -w '%{http_code}' -b $A $BASE/admin)
 check "일반 유저 관리자 접근 차단(403)" "$CODE" "403"
+
+# --- 비밀번호 변경 시 다른 기기 세션 무효화 (세션 버전) ---
+A2=$TMP/alice2.cookie
+T=$(csrf $A2 /login)
+curl -s -o /dev/null -b $A2 -c $A2 -d "csrf_token=$T&username=$ALICE&password=Passw0rd1" $BASE/login -L
+CODE=$(curl -s -o /dev/null -w '%{http_code}' -b $A2 $BASE/profile)
+check "같은 계정 두 번째 기기 로그인" "$CODE" "200"
+T=$(csrf $A /profile)
+curl -s -o $TMP/pw -b $A -c $A -d "csrf_token=$T&current_password=Passw0rd1&new_password=NewPassw0rd2&new_password2=NewPassw0rd2" $BASE/profile/password -L
+contains "비밀번호 변경" $TMP/pw "비밀번호가 변경되었습니다"
+CODE=$(curl -s -o /dev/null -w '%{http_code}' -b $A2 $BASE/profile)
+check "비밀번호 변경 시 다른 기기 세션 무효화" "$CODE" "302"
 
 # --- SQL Injection 시도 ---
 T=$(csrf $TMP/sqli.cookie /login)
